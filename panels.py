@@ -97,7 +97,7 @@ def _connect_section() -> ui.UINode:
                                   {"label": "Demo / sandbox", "value": "demo"},
                                   {"label": "Production", "value": "production"},
                               ],
-                              default="demo"),
+                              value="demo"),
                 ]),
                 ui.Stack(direction="v", gap=1, align="stretch", children=[
                     ui.Text("Integration Key", variant="caption"),
