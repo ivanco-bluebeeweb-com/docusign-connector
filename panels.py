@@ -146,6 +146,9 @@ async def docusign_connect_panel(ctx, **kwargs) -> object:
         ui.Text("Connected accounts", variant="subtitle"),
         _connections_section(connections),
         ui.Divider(),
+        ui.Button("View envelope dashboard", variant="primary", size="sm", full_width=True,
+                  icon="FileSignature", on_click=ui.Call("__panel__docusign_center")),
+        ui.Divider(),
         _connect_section(),
         ui.Divider(),
         _settings_button(),
@@ -188,15 +191,83 @@ async def docusign_connect_help(ctx, **kwargs) -> object:
 
 
 @ext.panel("docusign_center", slot="center", title="DocuSign", icon="✍️", center_overlay=True)
-async def docusign_center_panel(ctx, **kwargs) -> object:
-    """Base center panel -- per UI_INTERFACE_STANDARD.md (2026-08-20).
-    This app has no list/detail content of its own to show in the center
-    by default (everything lives in the sidebar). MUST carry
-    center_overlay=True: per docs.imperal.io/en/concepts/panels, a plain
-    slot="center" panel is registered but the Panel app never fetches it
-    at session-init without that flag. Text is the shared canonical
-    wording -- must stay identical across every app in this situation."""
-    return ui.Empty(
-        message="Nothing to show here -- this app is managed entirely from the sidebar.",
-        icon="👈",
-    )
+async def docusign_center_panel(ctx, envelope_id: str = "", **kwargs) -> object:
+    """Post-connect main screen: an account health audit plus recent
+    envelopes, or an envelope detail when `envelope_id` is passed
+    (master-detail via the same panel_id, per UI_COMPONENT_VOCABULARY.md §3)."""
+    connections = await h._load_connections(ctx)
+    if not connections:
+        return ui.Empty(
+            message="Connect a DocuSign account from the sidebar to see it here.",
+            icon="✍️",
+        )
+    if envelope_id:
+        return await _envelope_detail(ctx, envelope_id)
+    return await _account_dashboard(ctx)
+
+
+async def _account_dashboard(ctx) -> ui.UINode:
+    import handlers_bulk_audit as hba
+    import handlers_envelope as he
+    from schemas import AuditAccountParams, ListParams
+
+    body: list[ui.UINode] = []
+    audit_result = await hba.audit_account_health(ctx, AuditAccountParams())
+    if audit_result.success and audit_result.data:
+        r = audit_result.data
+        body.append(ui.Stats(children=[
+            ui.Stat(label="Envelopes checked", value=str(r.total_envelopes_checked)),
+            ui.Stat(label="Pending signature", value=str(r.pending_signature_count)),
+            ui.Stat(label="Declined", value=str(r.declined_count)),
+            ui.Stat(label="Voided", value=str(r.voided_count)),
+        ]))
+        if r.stuck_envelopes:
+            body.append(ui.Alert(title="Stuck envelopes",
+                                  message=f"{len(r.stuck_envelopes)} envelope(s) have been pending too long.",
+                                  type="warning"))
+        body.append(ui.Divider())
+
+    body.append(ui.Text("Recent envelopes", variant="subtitle"))
+    list_result = await he.list_envelopes(ctx, ListParams(count=20))
+    envelopes = list_result.data.items if list_result.success and list_result.data else []
+    if envelopes:
+        columns = [
+            ui.DataColumn("title", "Subject"),
+            ui.DataColumn("status", "Status"),
+            ui.DataColumn("sent_at", "Sent"),
+        ]
+        rows = [
+            {"title": e.email_subject or e.title or e.id, "status": e.status,
+             "sent_at": (e.sent_at or e.created_at or "")[:10] or "—", "envelope_id": e.id}
+            for e in envelopes
+        ]
+        body.append(ui.DataTable(columns=columns, rows=rows,
+                                  on_row_click=ui.Call("__panel__docusign_center", {"envelope_id": "{envelope_id}"})))
+    else:
+        body.append(ui.Text("No envelopes found on this account.", variant="caption"))
+    return ui.Stack(direction="v", gap=3, align="stretch", children=body)
+
+
+async def _envelope_detail(ctx, envelope_id: str) -> ui.UINode:
+    import handlers_envelope as he
+    from schemas import EnvelopeScopedParams
+    result = await he.get_envelope(ctx, EnvelopeScopedParams(envelope_id=envelope_id))
+    if not result.success or not result.data:
+        return ui.Stack(direction="v", gap=3, align="stretch", children=[
+            ui.Button("← Back to envelopes", variant="ghost", size="sm",
+                      on_click=ui.Call("__panel__docusign_center")),
+            ui.Alert(title="Could not load this envelope",
+                     message=result.error or "It may have been deleted or you lack access.", type="error"),
+        ])
+    e = result.data
+    return ui.Stack(direction="v", gap=3, align="stretch", children=[
+        ui.Button("← Back to envelopes", variant="ghost", size="sm",
+                  on_click=ui.Call("__panel__docusign_center")),
+        ui.Header(text=e.email_subject or e.title or envelope_id, level=3),
+        ui.KeyValue(columns=2, items=[
+            {"key": "Status", "value": e.status},
+            {"key": "Sent", "value": e.sent_at or "—"},
+            {"key": "Completed", "value": e.completed_at or "—"},
+            {"key": "Signers", "value": str(len(e.signers))},
+        ]),
+    ])
