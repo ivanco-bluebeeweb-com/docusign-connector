@@ -34,10 +34,10 @@ async def get_account_info(ctx, params: ConnScopedParams) -> ActionResult:
         data = await dc.request(ctx, conn, "GET", "", action="get_account_info")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(AccountInfo(
+    return ActionResult.success(AccountInfo(
         account_id=conn.get("account_id", ""), account_name=data.get("accountName", "") or conn.get("account_name", ""),
         plan_name=data.get("planName", ""), is_admin=str(data.get("isDowngrade", "") == "" ),
-    ))
+    ), summary="Account info retrieved.")
 
 
 @chat.function(
@@ -58,11 +58,11 @@ async def get_billing_plan(ctx, params: ConnScopedParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     plan = data.get("planInformation", {}) if isinstance(data, dict) else {}
-    return ActionResult.ok(BillingPlan(
+    return ActionResult.success(BillingPlan(
         plan_name=data.get("planName", ""),
         envelopes_sent=str(plan.get("currentEnvelopeCount", "") or ""),
         envelopes_allowed=str(plan.get("allowedEnvelopeCount", "") or ""),
-    ))
+    ), summary="Billing plan retrieved.")
 
 
 @chat.function(
@@ -88,9 +88,9 @@ async def get_diagnostics_settings(ctx, params: ConnScopedParams) -> ActionResul
         log_count = str(len(logs.get("apiRequestLogs", []))) if isinstance(logs, dict) else "0"
     except dc.ClientFail:
         log_count = "0"
-    return ActionResult.ok(DiagnosticsSettings(
+    return ActionResult.success(DiagnosticsSettings(
         api_request_logging=str(data.get("apiRequestLogging", "")), log_count=log_count,
-    ))
+    ), summary="Diagnostics settings retrieved.")
 
 
 @chat.function(
@@ -116,4 +116,4 @@ async def search_recipient_names(ctx, params: SearchRecipientNamesParams) -> Act
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     names = data.get("names", []) if isinstance(data, dict) else []
-    return ActionResult.ok(RecipientNames(matches=[n for n in names if isinstance(n, str)]))
+    return ActionResult.success(RecipientNames(matches=[n for n in names if isinstance(n, str)]), summary="Search recipient names done.")

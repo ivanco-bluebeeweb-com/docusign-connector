@@ -30,10 +30,10 @@ async def list_brands(ctx, params: ConnScopedParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     items = data.get("brands", []) if isinstance(data, dict) else []
-    return ActionResult.ok(BrandList(items=[
+    return ActionResult.success(BrandList(items=[
         Brand(id=b.get("brandId", ""), name=b.get("brandName", ""), is_default=b.get("isSendingDefault", ""))
         for b in items
-    ]))
+    ]), summary="Brands listed.")
 
 
 @chat.function(
@@ -55,4 +55,4 @@ async def apply_brand_to_envelope(ctx, params: ApplyBrandToEnvelopeParams) -> Ac
         await dc.request(ctx, conn, "PUT", f"/envelopes/{params.envelope_id}", json_body=body, action="apply_brand_to_envelope")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(Brand(id=params.brand_id))
+    return ActionResult.success(Brand(id=params.brand_id), summary="Apply brand to envelope done.")

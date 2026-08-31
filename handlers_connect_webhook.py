@@ -66,10 +66,10 @@ async def create_connect_webhook(ctx, params: CreateConnectWebhookParams) -> Act
         data = await dc.request(ctx, conn, "POST", "/connect", json_body=body, action="create_connect_webhook")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(ConnectConfig(
+    return ActionResult.success(ConnectConfig(
         id=data.get("connectId", ""), name=params.name, url_to_publish_to=params.url_to_publish_to,
         enabled="true", events_json=params.events_json,
-    ))
+    ), summary="Connect webhook created.")
 
 
 @chat.function(
@@ -90,7 +90,7 @@ async def list_connect_webhooks(ctx, params: ConnScopedParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     items = data.get("configurations", []) if isinstance(data, dict) else []
-    return ActionResult.ok(ConnectConfigList(items=[_connect_from_api(c) for c in items]))
+    return ActionResult.success(ConnectConfigList(items=[_connect_from_api(c) for c in items]), summary="Connect webhooks listed.")
 
 
 @chat.function(
@@ -118,7 +118,7 @@ async def update_connect_webhook(ctx, params: UpdateConnectWebhookParams) -> Act
         await dc.request(ctx, conn, "PUT", "/connect", json_body=body, action="update_connect_webhook")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(ConnectConfig(id=params.connect_id, name=params.name, url_to_publish_to=params.url_to_publish_to, enabled=params.enabled))
+    return ActionResult.success(ConnectConfig(id=params.connect_id, name=params.name, url_to_publish_to=params.url_to_publish_to, enabled=params.enabled), summary="Connect webhook updated.")
 
 
 @chat.function(
@@ -139,7 +139,7 @@ async def delete_connect_webhook(ctx, params: DeleteConnectWebhookParams) -> Act
         await dc.request(ctx, conn, "DELETE", f"/connect/{params.connect_id}", action="delete_connect_webhook")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(DeleteResult(id=params.connect_id, deleted=True))
+    return ActionResult.success(DeleteResult(id=params.connect_id, deleted=True), summary="Connect webhook deleted.")
 
 
 @chat.function(
@@ -161,13 +161,13 @@ async def get_connect_failures(ctx, params: GetConnectFailuresParams) -> ActionR
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     items = data.get("failures", []) if isinstance(data, dict) else []
-    return ActionResult.ok(ConnectLogList(items=[
+    return ActionResult.success(ConnectLogList(items=[
         ConnectLog(
             connect_id=fa.get("connectDebugLog", {}).get("connectId", "") if isinstance(fa.get("connectDebugLog"), dict) else "",
             status=fa.get("failureType", ""), logged_at=fa.get("timestamp", ""), envelope_id=fa.get("envelopeId", ""),
         )
         for fa in items
-    ]))
+    ]), summary="Connect failures retrieved.")
 
 
 @chat.function(
@@ -188,4 +188,4 @@ async def retry_connect_failure(ctx, params: RetryConnectFailureParams) -> Actio
         await dc.request(ctx, conn, "PUT", f"/connect/failures/{params.failure_id}", action="retry_connect_failure")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(DeleteResult(id=params.failure_id, deleted=False))
+    return ActionResult.success(DeleteResult(id=params.failure_id, deleted=False), summary="Retry connect failure done.")

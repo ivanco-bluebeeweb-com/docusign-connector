@@ -46,7 +46,7 @@ async def list_templates(ctx, params: ListParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     templates = data.get("envelopeTemplates", []) if isinstance(data, dict) else []
-    return ActionResult.ok(TemplateList(items=[_template_from_api(t) for t in templates]))
+    return ActionResult.success(TemplateList(items=[_template_from_api(t) for t in templates]), summary="Templates listed.")
 
 
 @chat.function(
@@ -66,7 +66,7 @@ async def get_template(ctx, params: GetTemplateParams) -> ActionResult:
         data = await dc.request(ctx, conn, "GET", f"/templates/{params.template_id}", action="get_template")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(_template_from_api(data))
+    return ActionResult.success(_template_from_api(data), summary="Template retrieved.")
 
 
 @chat.function(
@@ -87,9 +87,9 @@ async def list_template_documents(ctx, params: GetTemplateParams) -> ActionResul
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     docs = data.get("templateDocuments", []) if isinstance(data, dict) else []
-    return ActionResult.ok(TemplateDocumentList(items=[
+    return ActionResult.success(TemplateDocumentList(items=[
         TemplateDocument(document_id=d.get("documentId", ""), name=d.get("name", "")) for d in docs
-    ]))
+    ]), summary="Template documents listed.")
 
 
 @chat.function(
@@ -129,7 +129,7 @@ async def create_template(ctx, params: CreateTemplateParams) -> ActionResult:
         data = await dc.request(ctx, conn, "POST", "/templates", json_body=body, action="create_template")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(Template(id=data.get("templateId", ""), name=params.name, description=params.description))
+    return ActionResult.success(Template(id=data.get("templateId", ""), name=params.name, description=params.description), summary="Template created.")
 
 
 @chat.function(
@@ -150,4 +150,4 @@ async def delete_template(ctx, params: DeleteTemplateParams) -> ActionResult:
         await dc.request(ctx, conn, "DELETE", f"/templates/{params.template_id}", action="delete_template")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(DeleteResult(id=params.template_id, deleted=True))
+    return ActionResult.success(DeleteResult(id=params.template_id, deleted=True), summary="Template deleted.")

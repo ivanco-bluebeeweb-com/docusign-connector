@@ -56,9 +56,9 @@ async def create_bulk_send_list(ctx, params: CreateBulkSendListParams) -> Action
         data = await dc.request(ctx, conn, "POST", "/bulk_send_lists", json_body=body, action="create_bulk_send_list")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(BulkList(
+    return ActionResult.success(BulkList(
         id=data.get("listId", ""), name=params.name, recipient_count=str(len(rows)),
-    ))
+    ), summary="Bulk send list created.")
 
 
 @chat.function(
@@ -79,10 +79,10 @@ async def list_bulk_send_lists(ctx, params: ConnScopedParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     lists = data.get("bulkSendLists", []) if isinstance(data, dict) else []
-    return ActionResult.ok(BulkListList(items=[
+    return ActionResult.success(BulkListList(items=[
         BulkList(id=b.get("listId", ""), name=b.get("name", ""), recipient_count=str(len(b.get("bulkCopies", []))))
         for b in lists
-    ]))
+    ]), summary="Bulk send lists listed.")
 
 
 @chat.function(
@@ -110,9 +110,9 @@ async def send_bulk_envelope(ctx, params: SendBulkEnvelopeParams) -> ActionResul
         )
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(BulkSendResult(
+    return ActionResult.success(BulkSendResult(
         batch_id=draft.get("batchId", ""), envelope_or_template_id=params.template_id,
-    ))
+    ), summary="Bulk envelope send requested.")
 
 
 @chat.function(
@@ -135,9 +135,9 @@ async def get_bulk_send_batch_status(ctx, params: GetBulkSendBatchStatusParams) 
         )
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(BulkSendBatchStatus(
+    return ActionResult.success(BulkSendBatchStatus(
         batch_id=params.batch_id,
         status=data.get("batchStatus", ""),
         envelopes_sent=str(data.get("envelopeCount", "") or data.get("sent", "") or ""),
         envelopes_failed=str(data.get("failed", "") or ""),
-    ))
+    ), summary="Bulk send batch status retrieved.")

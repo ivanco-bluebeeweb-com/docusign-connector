@@ -35,10 +35,10 @@ async def list_folders(ctx, params: ConnScopedParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     items = data.get("folders", []) if isinstance(data, dict) else []
-    return ActionResult.ok(FolderList(items=[
+    return ActionResult.success(FolderList(items=[
         Folder(id=fo.get("folderId", ""), name=fo.get("name", ""), item_count=str(fo.get("itemCount", "") or ""))
         for fo in items
-    ]))
+    ]), summary="Folders listed.")
 
 
 @chat.function(
@@ -59,7 +59,7 @@ async def list_folder_items(ctx, params: ListFolderItemsParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     items = data.get("folderItems", []) if isinstance(data, dict) else []
-    return ActionResult.ok(EnvelopeList(items=[_envelope_from_api(e) for e in items]))
+    return ActionResult.success(EnvelopeList(items=[_envelope_from_api(e) for e in items]), summary="Folder items listed.")
 
 
 @chat.function(
@@ -81,4 +81,4 @@ async def move_envelope_to_folder(ctx, params: MoveEnvelopeToFolderParams) -> Ac
         await dc.request(ctx, conn, "PUT", f"/folders/{params.folder_id}", json_body=body, action="move_envelope_to_folder")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(Folder(id=params.folder_id))
+    return ActionResult.success(Folder(id=params.folder_id), summary="Move envelope to folder done.")

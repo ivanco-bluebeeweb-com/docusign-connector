@@ -51,7 +51,7 @@ async def create_powerform(ctx, params: CreatePowerFormParams) -> ActionResult:
         data = await dc.request(ctx, conn, "POST", "/powerforms", json_body=body, action="create_powerform")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(_powerform_from_api(data))
+    return ActionResult.success(_powerform_from_api(data), summary="Powerform created.")
 
 
 @chat.function(
@@ -72,7 +72,7 @@ async def list_powerforms(ctx, params: ConnScopedParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     items = data.get("powerFormsList", []) if isinstance(data, dict) else []
-    return ActionResult.ok(PowerFormList(items=[_powerform_from_api(p) for p in items]))
+    return ActionResult.success(PowerFormList(items=[_powerform_from_api(p) for p in items]), summary="Powerforms listed.")
 
 
 @chat.function(
@@ -93,4 +93,4 @@ async def delete_powerform(ctx, params: DeletePowerFormParams) -> ActionResult:
         await dc.request(ctx, conn, "DELETE", "/powerforms", json_body={"powerFormsId": [params.powerform_id]}, action="delete_powerform")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(DeleteResult(id=params.powerform_id, deleted=True))
+    return ActionResult.success(DeleteResult(id=params.powerform_id, deleted=True), summary="Powerform deleted.")

@@ -37,10 +37,10 @@ async def list_account_users(ctx, params: ConnScopedParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     items = data.get("users", []) if isinstance(data, dict) else []
-    return ActionResult.ok(DocusignUserList(items=[
+    return ActionResult.success(DocusignUserList(items=[
         DocusignUser(id=u.get("userId", ""), user_name=u.get("userName", ""), email=u.get("email", ""), user_status=u.get("userStatus", ""))
         for u in items
-    ]))
+    ]), summary="Account users listed.")
 
 
 @chat.function(
@@ -63,10 +63,10 @@ async def create_account_user(ctx, params: CreateUserParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     created = (data.get("newUsers") or [{}])[0] if isinstance(data, dict) else {}
-    return ActionResult.ok(DocusignUser(
+    return ActionResult.success(DocusignUser(
         id=created.get("userId", ""), user_name=params.user_name, email=params.email,
         user_status=created.get("userStatus", ""),
-    ))
+    ), summary="Account user created.")
 
 
 @chat.function(
@@ -88,7 +88,7 @@ async def delete_account_user(ctx, params: DeleteUserParams) -> ActionResult:
         await dc.request(ctx, conn, "DELETE", "/users", json_body=body, action="delete_account_user")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(DeleteResult(id=params.user_id, deleted=True))
+    return ActionResult.success(DeleteResult(id=params.user_id, deleted=True), summary="Account user deleted.")
 
 
 @chat.function(
@@ -109,10 +109,10 @@ async def list_groups(ctx, params: ConnScopedParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     items = data.get("groups", []) if isinstance(data, dict) else []
-    return ActionResult.ok(GroupList(items=[
+    return ActionResult.success(GroupList(items=[
         Group(id=g.get("groupId", ""), name=g.get("groupName", ""), user_count=str(g.get("usersCount", "") or ""))
         for g in items
-    ]))
+    ]), summary="Groups listed.")
 
 
 @chat.function(
@@ -135,7 +135,7 @@ async def create_group(ctx, params: CreateGroupParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     created = (data.get("groups") or [{}])[0] if isinstance(data, dict) else {}
-    return ActionResult.ok(Group(id=created.get("groupId", ""), name=params.group_name, user_count="0"))
+    return ActionResult.success(Group(id=created.get("groupId", ""), name=params.group_name, user_count="0"), summary="Group created.")
 
 
 @chat.function(
@@ -161,7 +161,7 @@ async def add_users_to_group(ctx, params: AddUsersToGroupParams) -> ActionResult
         await dc.request(ctx, conn, "PUT", f"/groups/{params.group_id}/users", json_body=body, action="add_users_to_group")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(Group(id=params.group_id))
+    return ActionResult.success(Group(id=params.group_id), summary="Users to group created.")
 
 
 @chat.function(
@@ -183,7 +183,7 @@ async def list_permission_profiles(ctx, params: ConnScopedParams) -> ActionResul
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     items = data.get("permissionProfiles", []) if isinstance(data, dict) else []
-    return ActionResult.ok(PermissionProfileList(items=[
+    return ActionResult.success(PermissionProfileList(items=[
         PermissionProfile(id=p.get("permissionProfileId", ""), name=p.get("permissionProfileName", ""))
         for p in items
-    ]))
+    ]), summary="Permission profiles listed.")

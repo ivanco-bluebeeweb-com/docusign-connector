@@ -104,11 +104,11 @@ async def create_envelope(ctx, params: CreateEnvelopeParams) -> ActionResult:
         data = await dc.request(ctx, conn, "POST", "/envelopes", json_body=body, action="create_envelope")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(Envelope(
+    return ActionResult.success(Envelope(
         id=data.get("envelopeId", ""), status=data.get("status", ""),
         email_subject=params.email_subject, email_blurb=params.email_blurb,
         signers=[Signer(name=s["name"], email=s["email"], recipient_id=s["recipientId"], routing_order=s["routingOrder"]) for s in signers],
-    ))
+    ), summary="Envelope created.")
 
 
 @chat.function(
@@ -146,7 +146,7 @@ async def create_envelope_from_template(ctx, params: CreateEnvelopeFromTemplateP
         data = await dc.request(ctx, conn, "POST", "/envelopes", json_body=body, action="create_envelope_from_template")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(Envelope(id=data.get("envelopeId", ""), status=data.get("status", ""), email_subject=params.email_subject))
+    return ActionResult.success(Envelope(id=data.get("envelopeId", ""), status=data.get("status", ""), email_subject=params.email_subject), summary="Envelope from template created.")
 
 
 @chat.function(
@@ -174,10 +174,10 @@ async def list_envelopes(ctx, params: ListParams) -> ActionResult:
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     envelopes = data.get("envelopes", []) if isinstance(data, dict) else []
-    return ActionResult.ok(EnvelopeList(
+    return ActionResult.success(EnvelopeList(
         items=[_envelope_from_api(e) for e in envelopes],
         total_set_size=str(data.get("totalSetSize", "")) if isinstance(data, dict) else "",
-    ))
+    ), summary="Envelopes listed.")
 
 
 @chat.function(
@@ -197,7 +197,7 @@ async def get_envelope(ctx, params: EnvelopeScopedParams) -> ActionResult:
         data = await dc.request(ctx, conn, "GET", f"/envelopes/{params.envelope_id}", action="get_envelope")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(_envelope_from_api(data))
+    return ActionResult.success(_envelope_from_api(data), summary="Envelope retrieved.")
 
 
 @chat.function(
@@ -220,7 +220,7 @@ async def void_envelope(ctx, params: VoidEnvelopeParams) -> ActionResult:
         data = await dc.request(ctx, conn, "PUT", f"/envelopes/{params.envelope_id}", json_body=body, action="void_envelope")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(Envelope(id=params.envelope_id, status="voided"))
+    return ActionResult.success(Envelope(id=params.envelope_id, status="voided"), summary="Void envelope done.")
 
 
 @chat.function(
@@ -241,7 +241,7 @@ async def resend_envelope(ctx, params: ResendEnvelopeParams) -> ActionResult:
         await dc.request(ctx, conn, "PUT", f"/envelopes/{params.envelope_id}/recipients", params={"resend_envelope": "true"}, json_body={}, action="resend_envelope")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(Envelope(id=params.envelope_id, status="resent"))
+    return ActionResult.success(Envelope(id=params.envelope_id, status="resent"), summary="Resend envelope done.")
 
 
 @chat.function(
@@ -269,7 +269,7 @@ async def correct_envelope(ctx, params: CorrectEnvelopeParams) -> ActionResult:
         await dc.request(ctx, conn, "PUT", f"/envelopes/{params.envelope_id}", json_body=body, action="correct_envelope")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(Envelope(id=params.envelope_id, status="corrected", email_subject=params.email_subject, email_blurb=params.email_blurb))
+    return ActionResult.success(Envelope(id=params.envelope_id, status="corrected", email_subject=params.email_subject, email_blurb=params.email_blurb), summary="Correct envelope done.")
 
 
 @chat.function(
@@ -290,10 +290,10 @@ async def list_envelope_documents(ctx, params: EnvelopeScopedParams) -> ActionRe
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     docs = data.get("envelopeDocuments", []) if isinstance(data, dict) else []
-    return ActionResult.ok(EnvelopeDocumentList(items=[
+    return ActionResult.success(EnvelopeDocumentList(items=[
         EnvelopeDocument(document_id=d.get("documentId", ""), name=d.get("name", ""), type=d.get("type", ""))
         for d in docs
-    ]))
+    ]), summary="Envelope documents listed.")
 
 
 @chat.function(
@@ -319,11 +319,11 @@ async def get_envelope_document(ctx, params: GetEnvelopeDocumentParams) -> Actio
         return ActionResult.error("Could not download this document.", code="DOCUSIGN_DOCUMENT_DOWNLOAD_FAILED")
     import base64
     raw = resp.body if isinstance(resp.body, (bytes, bytearray)) else str(resp.body).encode("utf-8", "ignore")
-    return ActionResult.ok(DocumentContent(
+    return ActionResult.success(DocumentContent(
         document_id=params.document_id,
         content_base64=base64.b64encode(raw).decode("ascii"),
         content_type=resp.headers.get("Content-Type", "application/pdf") if hasattr(resp, "headers") else "application/pdf",
-    ))
+    ), summary="Envelope document retrieved.")
 
 
 @chat.function(
@@ -349,7 +349,7 @@ async def update_recipients(ctx, params: UpdateRecipientsParams) -> ActionResult
         await dc.request(ctx, conn, "PUT", f"/envelopes/{params.envelope_id}/recipients", json_body=body, action="update_recipients")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(RecipientList(signers=[_signer_from_api({"recipientId": s["recipientId"], "name": s["name"], "email": s["email"]}) for s in body["signers"]]))
+    return ActionResult.success(RecipientList(signers=[_signer_from_api({"recipientId": s["recipientId"], "name": s["name"], "email": s["email"]}) for s in body["signers"]]), summary="Recipients updated.")
 
 
 @chat.function(
@@ -375,7 +375,7 @@ async def add_recipient_tabs(ctx, params: AddRecipientTabsParams) -> ActionResul
         data = await dc.request(ctx, conn, "POST", f"/envelopes/{params.envelope_id}/recipients/{params.recipient_id}/tabs", json_body=tabs, action="add_recipient_tabs")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(TabsResult(tabs_json=json.dumps(data)))
+    return ActionResult.success(TabsResult(tabs_json=json.dumps(data)), summary="Recipient tabs created.")
 
 
 @chat.function(
@@ -395,7 +395,7 @@ async def list_recipient_tabs(ctx, params: ListRecipientTabsParams) -> ActionRes
         data = await dc.request(ctx, conn, "GET", f"/envelopes/{params.envelope_id}/recipients/{params.recipient_id}/tabs", action="list_recipient_tabs")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(TabsResult(tabs_json=json.dumps(data)))
+    return ActionResult.success(TabsResult(tabs_json=json.dumps(data)), summary="Recipient tabs listed.")
 
 
 @chat.function(
@@ -417,10 +417,10 @@ async def get_envelope_audit_events(ctx, params: GetEnvelopeAuditEventsParams) -
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
     events = data.get("auditEvents", []) if isinstance(data, dict) else []
-    return ActionResult.ok(AuditEventList(items=[
+    return ActionResult.success(AuditEventList(items=[
         AuditEvent(event=e.get("eventFields", [{}])[0].get("value", "") if e.get("eventFields") else "", logged_at=e.get("logTime", ""), recipient_email="")
         for e in events
-    ]))
+    ]), summary="Envelope audit events retrieved.")
 
 
 @chat.function(
@@ -450,4 +450,4 @@ async def get_embedded_signing_url(ctx, params: GetSigningUrlParams) -> ActionRe
         data = await dc.request(ctx, conn, "POST", f"/envelopes/{params.envelope_id}/views/recipient", json_body=body, action="get_embedded_signing_url")
     except dc.ClientFail as f:
         return ActionResult.error(f.message, code=f.payload.get("error_code"))
-    return ActionResult.ok(SigningUrlResult(url=data.get("url", "")))
+    return ActionResult.success(SigningUrlResult(url=data.get("url", "")), summary="Embedded signing url retrieved.")

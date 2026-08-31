@@ -54,7 +54,7 @@ async def bulk_void_envelopes(ctx, params: BulkVoidEnvelopesParams) -> ActionRes
         except dc.ClientFail as f:
             items.append(BulkResultItem(id=eid, ok=False, error=f.message))
             failed += 1
-    return ActionResult.ok(BulkResult(items=items, succeeded=succeeded, failed=failed))
+    return ActionResult.success(BulkResult(items=items, succeeded=succeeded, failed=failed), summary="Bulk void envelopes done.")
 
 
 @chat.function(
@@ -95,7 +95,7 @@ async def bulk_resend_envelopes(ctx, params: BulkResendEnvelopesParams) -> Actio
         except dc.ClientFail as f:
             items.append(BulkResultItem(id=eid, ok=False, error=f.message))
             failed += 1
-    return ActionResult.ok(BulkResult(items=items, succeeded=succeeded, failed=failed))
+    return ActionResult.success(BulkResult(items=items, succeeded=succeeded, failed=failed), summary="Bulk resend envelopes done.")
 
 
 @chat.function(
@@ -159,7 +159,7 @@ async def audit_account_health(ctx, params: AuditAccountParams) -> ActionResult:
     if not envelopes:
         notes.append("No envelopes found in this account's history yet.")
 
-    return ActionResult.ok(AccountHealthReport(
+    return ActionResult.success(AccountHealthReport(
         total_envelopes_checked=len(envelopes),
         pending_signature_count=pending,
         declined_count=declined,
@@ -167,4 +167,4 @@ async def audit_account_health(ctx, params: AuditAccountParams) -> ActionResult:
         stuck_envelopes=stuck,
         expiring_soon=expiring,
         notes=notes,
-    ))
+    ), summary="Account health audit ready.")

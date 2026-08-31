@@ -121,7 +121,7 @@ async def connect_docusign(ctx, params: ConnectDocusignParams) -> ActionResult:
     connections = await _load_connections(ctx)
     connections.append(conn)
     await _save_connections(ctx, connections)
-    return ActionResult.ok(_connection_to_entity(conn))
+    return ActionResult.success(_connection_to_entity(conn), summary="Docusign connected.")
 
 
 @chat.function(
@@ -142,7 +142,7 @@ async def disconnect_docusign(ctx, params: DisconnectDocusignParams) -> ActionRe
     if len(remaining) == len(connections):
         return ActionResult.error("No such DocuSign connection.", code="DOCUSIGN_NOT_CONNECTED")
     await _save_connections(ctx, remaining)
-    return ActionResult.ok(DeleteResult(id=target, deleted=True))
+    return ActionResult.success(DeleteResult(id=target, deleted=True), summary="Docusign disconnected.")
 
 
 @chat.function(
@@ -156,7 +156,7 @@ async def disconnect_docusign(ctx, params: DisconnectDocusignParams) -> ActionRe
 async def list_connections(ctx, params: NoParams) -> ActionResult:
     """List the connected DocuSign accounts and whether each still needs one-time admin consent."""
     connections = await _load_connections(ctx)
-    return ActionResult.ok(ProviderConnectionList(items=[_connection_to_entity(c) for c in connections]))
+    return ActionResult.success(ProviderConnectionList(items=[_connection_to_entity(c) for c in connections]), summary="Connections listed.")
 
 
 @chat.function(
@@ -174,4 +174,4 @@ async def get_consent_url(ctx, params: GetConsentUrlParams) -> ActionResult:
     if err:
         return err
     url = dc.build_consent_url(conn["client_id"], conn.get("environment", "demo"))
-    return ActionResult.ok(ConsentUrlResult(consent_url=url, environment=conn.get("environment", "demo")))
+    return ActionResult.success(ConsentUrlResult(consent_url=url, environment=conn.get("environment", "demo")), summary="Consent url retrieved.")
