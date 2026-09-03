@@ -38,8 +38,7 @@ def _settings_button() -> ui.UINode:
     """The one required secondary entry point into the settings screen --
     always the last element at the bottom of the sidebar."""
     return ui.Button(
-        "App settings", variant="secondary", size="sm", full_width=True,
-        icon="settings", on_click=ui.Call("__panel__docusign_settings"),
+        "App settings", variant="secondary", size="sm", icon="settings", on_click=ui.Call("__panel__docusign_settings"),
     )
 
 
@@ -86,6 +85,9 @@ def _connect_section() -> ui.UINode:
         ui.Button("How do I set this up?", variant="ghost", size="sm",
                   icon="HelpCircle",
                   on_click=ui.Call("__panel__docusign_connect_help")),
+        ui.Button("Log in with DocuSign (OAuth / JWT)", variant="primary", size="sm", icon="login"),
+        ui.Divider(),
+        ui.Text("Or connect via JWT Integration Key", variant="caption"),
         ui.Form(
             action="connect_docusign",
             submit_label="Verify and connect",
@@ -146,8 +148,7 @@ async def docusign_connect_panel(ctx, **kwargs) -> object:
         ui.Text("Connected accounts", variant="subtitle"),
         _connections_section(connections),
         ui.Divider(),
-        ui.Button("View envelope dashboard", variant="primary", size="sm", full_width=True,
-                  icon="FileSignature", on_click=ui.Call("__panel__docusign_center")),
+        ui.Button("View envelope dashboard", variant="primary", size="sm", icon="FileSignature", on_click=ui.Call("__panel__docusign_center")),
         ui.Divider(),
         _connect_section(),
         ui.Divider(),
